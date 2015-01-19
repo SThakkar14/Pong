@@ -45,37 +45,41 @@ public class BattleField extends Activity {
     }
 
     class myView extends View {
-        Paint paint = new Paint();
-        int ballPositionX;
-        int ballPositionY;
-        int ballRadius;
+        Paint paint;
 
-        int ballXVelocity;
-        int ballYVelocity;
+        int squarePositionLeft;
+        int squarePositionTop;
+        int squareDimension;
+
+        int squareXVelocity;
+        int squareYVelocity;
 
         int screenWidth;
         int screenHeight;
 
-        int rectPositionX;
-        int rectPositionY;
-        int rectWidth;
-        int rectHeight;
+        int paddleLeft;
+        int paddleTop;
+        int paddleWidth;
+        int paddleHeight;
 
         boolean touchStarted;
+
+        int prevTouchX;
+        int prevTouchY;
 
         public myView(Context context) {
             super(context);
 
-            ballRadius = 20;
+            paint = new Paint();
             paint.setColor(Color.parseColor("#CD5C5C"));
 
-            ballXVelocity = 5;
-            ballYVelocity = 5;
+            squareXVelocity = 5;
+            squareYVelocity = 5;
 
-            rectPositionX = 0;
-            rectPositionY = 0;
-            rectWidth = 100;
-            rectHeight = 400;
+            paddleLeft = 0;
+            paddleTop = 0;
+            paddleWidth = 50;
+            paddleHeight = 400;
 
             touchStarted = false;
         }
@@ -84,48 +88,58 @@ public class BattleField extends Activity {
             screenHeight = h;
             screenWidth = w;
 
-            ballPositionX = w / 2;
-            ballPositionY = h / 2;
+            squarePositionLeft = w / 2 - 10;
+            squarePositionTop = h / 2 - 10;
+            squareDimension = 20;
         }
 
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
 
-            if (ballPositionX - ballRadius < 0 || ballPositionX + ballRadius > screenWidth)
-                ballXVelocity *= -1;
-            if (ballPositionY - ballRadius < 0 || ballPositionY + ballRadius > screenHeight)
-                ballYVelocity *= -1;
+            if (squarePositionLeft < 0 || squarePositionLeft + squareDimension > screenWidth || overlaps())
+                squareXVelocity *= -1;
+            if (squarePositionTop < 0 || squarePositionTop + squareDimension > screenHeight)
+                squareYVelocity *= -1;
 
-            canvas.drawCircle(ballPositionX, ballPositionY, ballRadius, paint);
-            ballPositionX += ballXVelocity;
-            ballPositionY += ballYVelocity;
+            canvas.drawRect(squarePositionLeft, squarePositionTop, squarePositionLeft + squareDimension, squarePositionTop + squareDimension, paint);
 
-            canvas.drawRect(rectPositionX, rectPositionY, rectPositionX + rectWidth, rectPositionY + rectHeight, paint);
+            squarePositionLeft += squareXVelocity;
+            squarePositionTop += squareYVelocity;
+
+            canvas.drawRect(paddleLeft, paddleTop, paddleLeft + paddleWidth, paddleTop + paddleHeight, paint);
 
             invalidate();
         }
 
         public boolean onTouchEvent(@NonNull MotionEvent e) {
+            int touchX = (int) e.getRawX();
+            int touchY = (int) e.getRawY();
 
-            switch (e.getAction()) {
-                case MotionEvent.ACTION_DOWN: {
-                    touchStarted = true;
-                    break;
-                }
-                case MotionEvent.ACTION_UP: {
-                    touchStarted = false;
-                    break;
-                }
-                case MotionEvent.ACTION_MOVE: {
-                    if (touchStarted) {
-                        rectPositionY = (int) e.getRawY();
-                    }
-                    break;
-                }
-
+            int action = e.getAction();
+            if (action == MotionEvent.ACTION_DOWN && isContained(touchX, touchY)) {
+                touchStarted = true;
+                prevTouchX = touchX;
+                prevTouchY = touchY;
+            } else if (action == MotionEvent.ACTION_UP)
+                touchStarted = false;
+            else if (action == MotionEvent.ACTION_MOVE && touchStarted) {
+                int possibleTop = paddleTop + touchY - prevTouchY;
+                if (possibleTop >= 0 && possibleTop + paddleHeight <= screenHeight)
+                    paddleTop = possibleTop;
+                prevTouchY = touchY;
             }
-
             return true;
+        }
+
+        private boolean isContained(int touchX, int touchY) {
+            return touchX > paddleLeft && touchX < paddleLeft + paddleWidth
+                    && touchY > paddleTop && touchY < paddleTop + paddleHeight;
+        }
+
+        private boolean overlaps() {
+            return squarePositionLeft <= paddleLeft + paddleWidth
+                    && squarePositionTop + squareDimension >= paddleTop
+                    && squarePositionTop <= paddleTop + paddleHeight;
         }
 
     }
