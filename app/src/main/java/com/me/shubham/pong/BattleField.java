@@ -44,28 +44,76 @@ public class BattleField extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    class myView extends View {
-        Paint paint;
+    private static class Paddle {
 
-        int squarePositionLeft;
-        int squarePositionTop;
-        int squareDimension;
-
-        int squareXVelocity;
-        int squareYVelocity;
-
-        int screenWidth;
-        int screenHeight;
-
-        int paddleLeft;
-        int paddleTop;
-        int paddleWidth;
-        int paddleHeight;
+        float paddleLeft;
+        float paddleTop;
+        float paddleWidth;
+        float paddleHeight;
 
         boolean touchStarted;
 
-        int prevTouchX;
-        int prevTouchY;
+        float x;
+        float y;
+
+        private Paddle(float paddleLeft, float paddleTop, float paddleWidth, float paddleHeight) {
+            this.paddleLeft = paddleLeft;
+            this.paddleTop = paddleTop;
+            this.paddleLeft = paddleLeft;
+            this.paddleWidth = paddleWidth;
+            this.paddleHeight = paddleHeight;
+
+            touchStarted = false;
+        }
+
+        public float getX() {
+            return x;
+        }
+
+        public float getY() {
+            return y;
+        }
+
+    }
+
+    private static class Square {
+        float squareXVelocity;
+        float squareYVelocity;
+
+        float squarePositionLeft;
+        float squarePositionTop;
+        float squareDimension;
+
+        float x;
+        float y;
+
+        private Square(float squarePositionLeft, float squarePositionTop, float squareDimension) {
+            squareXVelocity = 5;
+            squareYVelocity = 5;
+
+            this.squarePositionLeft = squarePositionLeft;
+            this.squarePositionTop = squarePositionTop;
+            this.squareDimension = squareDimension;
+        }
+
+        public float getX() {
+            return x;
+        }
+
+        public float getY() {
+            return y;
+        }
+
+    }
+
+    class myView extends View {
+        Paint paint;
+        Square square;
+        Paddle paddleLeft;
+        Paddle paddleRight;
+
+        int screenWidth;
+        int screenHeight;
 
         public myView(Context context) {
             super(context);
@@ -73,50 +121,60 @@ public class BattleField extends Activity {
             paint = new Paint();
             paint.setColor(Color.parseColor("#CD5C5C"));
 
-            squareXVelocity = 5;
-            squareYVelocity = 5;
+            paddleLeft = new Paddle(0, 0, 50, 400);
+            paddleRight = new Paddle(0, 0, 50, 400);
 
-            paddleLeft = 0;
-            paddleTop = 0;
-            paddleWidth = 50;
-            paddleHeight = 400;
-
-            touchStarted = false;
         }
 
         protected void onSizeChanged(int w, int h, int oldW, int oldH) {
             screenHeight = h;
             screenWidth = w;
 
-            squarePositionLeft = w / 2 - 10;
-            squarePositionTop = h / 2 - 10;
-            squareDimension = 20;
+            square = new Square(w / 2 - 10, h / 2 - 10, 20);
         }
 
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+
+            drawComponents(canvas);
+
+            canvas.drawRect(paddleLeft, paddleTop, paddleLeft + paddleWidth, paddleTop + paddleHeight, paint);
+            canvas.drawRect(squarePositionLeft, squarePositionTop, squarePositionLeft + squareDimension, squarePositionTop + squareDimension, paint);
+
 
             if (squarePositionLeft < 0 || squarePositionLeft + squareDimension > screenWidth || overlaps())
                 squareXVelocity *= -1;
             if (squarePositionTop < 0 || squarePositionTop + squareDimension > screenHeight)
                 squareYVelocity *= -1;
 
-            canvas.drawRect(squarePositionLeft, squarePositionTop, squarePositionLeft + squareDimension, squarePositionTop + squareDimension, paint);
 
             squarePositionLeft += squareXVelocity;
             squarePositionTop += squareYVelocity;
 
-            canvas.drawRect(paddleLeft, paddleTop, paddleLeft + paddleWidth, paddleTop + paddleHeight, paint);
 
             invalidate();
         }
 
+        public void drawComponents(Canvas canvas) {
+            canvas.drawRect(paddleLeft.paddleLeft, paddleLeft.paddleTop, paddleLeft.paddleLeft + paddleLeft.paddleWidth, );
+        }
+
         public boolean onTouchEvent(@NonNull MotionEvent e) {
+
             int touchX = (int) e.getRawX();
             int touchY = (int) e.getRawY();
 
-            int action = e.getAction();
-            if (action == MotionEvent.ACTION_DOWN && isContained(touchX, touchY)) {
+            int action = e.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+
+                if (!paddleOneTouched && isContained(touchX, touchY, 1)) {
+                    paddleOneTouched = true;
+
+                } else if (!paddleTwoTouched && isContained(touchX, touchY, 2)) {
+                    paddleTwoTouched = true;
+                }
+
+
                 touchStarted = true;
                 prevTouchX = touchX;
                 prevTouchY = touchY;
@@ -131,12 +189,16 @@ public class BattleField extends Activity {
             return true;
         }
 
-        private boolean isContained(int touchX, int touchY) {
-            return touchX > paddleLeft && touchX < paddleLeft + paddleWidth
-                    && touchY > paddleTop && touchY < paddleTop + paddleHeight;
+        private boolean isContained(int touchX, int touchY, int paddleIndex) {
+            if (paddleIndex == 1)
+                return touchX > paddleOneLeft && touchX < paddleOneLeft + paddleOneWidth
+                        && touchY > paddleOneTop && touchY < paddleOneTop + paddleOneHeight;
+            else
+                return touchX > paddleTwoLeft && touchX < paddleTwoLeft + paddleTwoWidth
+                        && touchY > paddleTwoTop && touchY < paddleTwoTop + paddleTwoHeight;
         }
 
-        private boolean overlaps() {
+        private boolean overlaps(int paddleIndex) {
             return squarePositionLeft <= paddleLeft + paddleWidth
                     && squarePositionTop + squareDimension >= paddleTop
                     && squarePositionTop <= paddleTop + paddleHeight;
